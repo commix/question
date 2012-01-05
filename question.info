@@ -1,5 +1,3 @@
 name = Question
 description = Provides a question field using the Fields API.
 core = 7.x
-
-dependencies[] = options

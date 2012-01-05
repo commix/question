@@ -12,10 +12,10 @@
 function question_field_info() {
   return array(
     'question' => array(
-      'label' => t('Question'),
-      'description' => t('A question field.'),
-      'default_widget' => 'question_options_buttons',
-      'default_formatter' => 'question_default',
+      'label' => t('Question (Multiple Choice)'),
+      'description' => t('A multiple choice question field.'),
+      'default_widget' => 'question_multiple_choice',
+      'default_formatter' => 'question_multiple_choice',
     ),
   );
 }
@@ -37,7 +37,7 @@ function question_field_is_empty($item, $field) {
 /**
  * Implements hook_field_settings_form().
  */
-function question_field_settings_form($field, $instance, $has_data) {
+/*function question_field_settings_form($field, $instance, $has_data) {
   $settings = $field['settings'];
   $settings += array(
     'question_label' => t('Question'),
@@ -57,15 +57,15 @@ function question_field_settings_form($field, $instance, $has_data) {
   }
 
   return $form;
-}
+}*/
 
 /**
  * Implements hook_field_formatter_info().
  */
 function question_field_formatter_info() {
   return array(
-    'question_default' => array(
-      'label' => t('Question'),
+    'question_multiple_choice' => array(
+      'label' => t('Question (Multiple Choice)'),
       'field types' => array('question'),
     ),
   );
@@ -78,14 +78,31 @@ function question_field_formatter_view($entity_type, $entity, $field, $instance,
   $element = array();
 
   switch ( $display['type'] ) {
-    case 'question_default':
-      foreach ( $items as $delta => $item ) {
-        $element[$delta]['#markup'] = $item['question'] . ' ' . $item['choice'] . ' ' . $item['answer'];
-      }
+    case 'question_multiple_choice':
+      $element[0]['#markup'] =  drupal_render(drupal_get_form('question_multiple_choice_form', $items));
       break;
   }
 
   return $element;
+}
+
+function question_multiple_choice_form($form, &$form_state, $items) {
+  $form = array();
+
+  foreach ( $items as $delta => $item ) {
+    $form['item_' . $delta] = array(
+      '#type' => 'radios',
+      '#title' => $item['question'],
+      '#options' => question_choice_extract_values($item['choice']),
+    );
+  }
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+
+  return $form;
 }
 
 /**
@@ -93,8 +110,8 @@ function question_field_formatter_view($entity_type, $entity, $field, $instance,
  */
 function question_field_widget_info() {
   return array(
-    'question_options_buttons' => array(
-      'label' => t('Question (Check boxes/radio buttons)'),
+    'question_multiple_choice' => array(
+      'label' => t('Question (Multiple Choice)'),
       'field types' => array('question'),
     ),
   );
@@ -107,27 +124,93 @@ function question_field_widget_form(&$form, &$form_state, $field, $instance, $la
   $element += array('#delta' => $delta);
 
   switch ( $instance['widget']['type'] ) {
-    case 'question_options_buttons':
+    case 'question_multiple_choice':
       $element['question'] = array(
         '#type' => 'textfield',
         '#title' => t('Question'),
         '#default_value' => empty($items[$delta]['question']) ? '' : $items[$delta]['question'],
         '#required' => $element['#required'],
       );
+
       $element['choice'] = array(
-        '#type' => 'textfield',
-        '#title' => t('Choice'),
+        '#type' => 'textarea',
+        '#title' => t('Choices'),
+        '#rows' => 10,
+        //'#default_value' => empty($items[$delta]['choice']) ? '' : question_choice_values_string($items[$delta]['choice']),
         '#default_value' => empty($items[$delta]['choice']) ? '' : $items[$delta]['choice'],
         '#required' => $element['#required'],
       );
+
+      $description = '<p>' . t('The possible values this field can contain. Enter one value per line, in the format key|label.');
+      $description .= '<br/>' . t('The key is the stored value, and must be numeric. The label will be used in displayed values and edit forms.');
+      $description .= '<br/>' . t('The label is optional: if a line contains a single number, it will be used as key and label.');
+      $description .= '<br/>' . t('Lists of labels are also accepted (one label per line), only if the field does not hold any values yet. Numeric keys will be automatically generated from the positions in the list.');
+      $description .= '</p>';
+      $element['choice']['#description'] = $description;
+
       $element['answer'] = array(
         '#type' => 'textfield',
         '#title' => t('Answer'),
         '#default_value' => empty($items[$delta]['answer']) ? '' : $items[$delta]['answer'],
         '#required' => $element['#required'],
       );
+
       break;
   }
 
   return $element;
+}
+
+/**
+ * Generates a string representation of an array of choices.
+ */
+function question_choice_values_string($values) {
+  $lines = array();
+
+  foreach ( $values as $key => $value ) {
+    $lines[] = "$key|$value";
+  }
+
+  return implode("\n", $lines);
+}
+
+/**
+ * Parse a string of 'choices' into an array.
+ */
+function question_choice_extract_values($string, $generate_keys = FALSE) {
+  $values = array();
+
+  $list = explode("\n", $string);
+  $list = array_map('trim', $list);
+  $list = array_filter($list, 'strlen');
+
+  $generated_keys = $explicit_keys = FALSE;
+  foreach ( $list as $position => $text ) {
+    $value = $key = FALSE;
+
+    // Check for an explicit key.
+    if ( preg_match('/(.*)\|(.*)/', $text, $matches) ) {
+      $key = $matches[1];
+      $value = $matches[2];
+      $explicit_keys = TRUE;
+    }
+    // Otherwise see if we can generate a key from the position.
+    elseif ( $generate_keys ) {
+      $key = (string) $position;
+      $value = $text;
+      $generated_keys = TRUE;
+    }
+    else {
+      return;
+    }
+
+    $values[$key] = $value;
+  }
+
+  // We generate keys only if the list contains no explicit key at all.
+  if ( $explicit_keys && $generated_keys ) {
+    return;
+  }
+
+  return $values;
 }
