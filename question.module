@@ -95,7 +95,7 @@ function question_field_widget_info() {
   return array(
     'question_options_buttons' => array(
       'label' => t('Question (Check boxes/radio buttons)'),
-      'field types' => array('question')
+      'field types' => array('question'),
     ),
   );
 }
