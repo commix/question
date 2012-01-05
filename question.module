@@ -1,0 +1,133 @@
+<?php
+
+/**
+ * @file
+ * Provides a question field using the Fields API.
+ */
+
+
+/**
+ * Implements hook_field_info().
+ */
+function question_field_info() {
+  return array(
+    'question' => array(
+      'label' => t('Question'),
+      'description' => t('A question field.'),
+      'default_widget' => 'question_options_buttons',
+      'default_formatter' => 'question_default',
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_validate().
+ */
+function question_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+  return; // @TODO: Add field validation.
+}
+
+/**
+ * Implements hook_field_is_empty().
+ */
+function question_field_is_empty($item, $field) {
+  return ( empty($item['question']) && empty($item['choice']) && empty($item['answer']) );
+}
+
+/**
+ * Implements hook_field_settings_form().
+ */
+function question_field_settings_form($field, $instance, $has_data) {
+  $settings = $field['settings'];
+  $settings += array(
+    'question_label' => t('Question'),
+  );
+
+  $form = array();
+
+  switch ( $field['type'] ) {
+    case 'question':
+      $form['question_label'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Question label'),
+        '#description' => t('Label for the question field.'),
+        '#default_value' => $settings['question_label'],
+      );
+      break;
+  }
+
+  return $form;
+}
+
+/**
+ * Implements hook_field_formatter_info().
+ */
+function question_field_formatter_info() {
+  return array(
+    'question_default' => array(
+      'label' => t('Question'),
+      'field types' => array('question'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function question_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $element = array();
+
+  switch ( $display['type'] ) {
+    case 'question_default':
+      foreach ( $items as $delta => $item ) {
+        $element[$delta]['#markup'] = $item['question'] . ' ' . $item['choice'] . ' ' . $item['answer'];
+      }
+      break;
+  }
+
+  return $element;
+}
+
+/**
+ * Implements hook_field_widget_info().
+ */
+function question_field_widget_info() {
+  return array(
+    'question_options_buttons' => array(
+      'label' => t('Question (Check boxes/radio buttons)'),
+      'field types' => array('question')
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_widget_form().
+ */
+function question_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  $element += array('#delta' => $delta);
+
+  switch ( $instance['widget']['type'] ) {
+    case 'question_options_buttons':
+      $element['question'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Question'),
+        '#default_value' => empty($items[$delta]['question']) ? '' : $items[$delta]['question'],
+        '#required' => $element['#required'],
+      );
+      $element['choice'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Choice'),
+        '#default_value' => empty($items[$delta]['choice']) ? '' : $items[$delta]['choice'],
+        '#required' => $element['#required'],
+      );
+      $element['answer'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Answer'),
+        '#default_value' => empty($items[$delta]['answer']) ? '' : $items[$delta]['answer'],
+        '#required' => $element['#required'],
+      );
+      break;
+  }
+
+  return $element;
+}

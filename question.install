@@ -1,0 +1,29 @@
+<?php
+
+/**
+ * @file
+ * Install / Update / Uninstall functions for question module.
+ */
+
+
+/**
+ * Implements hook_field_schema().
+ */
+function question_field_schema($field) {
+  return array(
+    'columns' => array(
+      'question' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE),
+      'choice' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE),
+      'answer' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE),
+    ),
+  );
+}
